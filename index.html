@@ -1,0 +1,3952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KrishiSphere - Smart Farming Management</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2E7D32;
+            --secondary-color: #4CAF50;
+            --accent-color: #FF6B35;
+            --background-light: #F5F7FA;
+            --background-dark: #1A1A1A;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --card-bg: #FFFFFF;
+            --border-color: #E0E0E0;
+            --success-color: #4CAF50;
+            --warning-color: #FF9800;
+            --error-color: #F44336;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --border-radius: 12px;
+        }
+
+        [data-theme="dark"] {
+            --background-light: #121212;
+            --card-bg: #1E1E1E;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --border-color: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+        }
+
+        .loading-logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        .loading-progress {
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            animation: loading 3s ease-in-out forwards;
+        }
+
+        @keyframes loading {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Authentication Styles */
+        .auth-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .auth-card {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .auth-logo {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1B5E20;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-google {
+            background: #DB4437;
+            color: white;
+            width: 100%;
+            margin: 0.5rem 0;
+        }
+
+        .btn-phone {
+            background: #0084FF;
+            color: white;
+            width: 100%;
+            margin: 0.5rem 0;
+        }
+
+        /* Main App Layout */
+        .app-container {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.5rem;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin: 0.25rem 0;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-right: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            color: var(--primary-color);
+            background: rgba(46, 125, 50, 0.1);
+            border-right-color: var(--primary-color);
+        }
+
+        .sidebar-nav i {
+            margin-right: 0.75rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        /* Dashboard Cards */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .stat-card {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .stat-change {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .stat-change.positive {
+            color: var(--success-color);
+        }
+
+        .stat-change.negative {
+            color: var(--error-color);
+        }
+
+        /* Forms and Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table th {
+            background: rgba(46, 125, 50, 0.1);
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .table tr:hover {
+            background: rgba(46, 125, 50, 0.05);
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+
+        /* Mobile Navigation */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 0.5rem;
+            z-index: 1000;
+        }
+
+        .mobile-nav-items {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: color 0.3s ease;
+        }
+
+        .mobile-nav-item.active,
+        .mobile-nav-item:hover {
+            color: var(--primary-color);
+        }
+
+        .mobile-nav-item i {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 1rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            z-index: 999;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 3000;
+            animation: slideInRight 0.3s ease;
+        }
+
+        .notification.success {
+            background: var(--success-color);
+        }
+
+        .notification.error {
+            background: var(--error-color);
+        }
+
+        .notification.warning {
+            background: var(--warning-color);
+        }
+
+        /* Weather Widget */
+        .weather-widget {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            text-align: center;
+        }
+
+        .weather-temp {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .weather-desc {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* Progress Bars */
+        .progress {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        /* Language Selector */
+        .language-selector {
+            select {
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 0.25rem 0.5rem;
+                color: var(--text-primary);
+            }
+        }
+
+        /* Crop Cards */
+        .crop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .crop-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .crop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .crop-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .crop-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .crop-status.active {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--success-color);
+        }
+
+        .crop-status.harvested {
+            background: rgba(255, 193, 7, 0.2);
+            color: var(--warning-color);
+        }
+
+        .crop-progress {
+            margin: 1rem 0;
+        }
+
+        .crop-progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .crop-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .mobile-nav {
+                display: block;
+            }
+
+            .content-area {
+                padding: 1rem;
+                padding-bottom: 80px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .fab {
+                bottom: 90px;
+            }
+
+            .modal-content {
+                margin: 1rem;
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .crop-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-card {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar, .mobile-nav, .fab, .btn, .header-actions {
+                display: none !important;
+            }
+            
+            .content-area {
+                padding: 0;
+            }
+            
+            .card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--background-light);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-success { color: var(--success-color); }
+        .text-warning { color: var(--warning-color); }
+        .text-error { color: var(--error-color); }
+        .text-primary { color: var(--primary-color); }
+        .text-secondary { color: var(--text-secondary); }
+        
+        .bg-success { background: var(--success-color); }
+        .bg-warning { background: var(--warning-color); }
+        .bg-error { background: var(--error-color); }
+        .bg-primary { background: var(--primary-color); }
+        
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+        
+        .p-1 { padding: 0.5rem; }
+        .p-2 { padding: 1rem; }
+        .p-3 { padding: 1.5rem; }
+        
+        .flex { display: flex; }
+        .flex-center { display: flex; justify-content: center; align-items: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .flex-column { flex-direction: column; }
+        .flex-wrap { flex-wrap: wrap; }
+        
+        .grid { display: grid; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+        
+        .gap-1 { gap: 0.5rem; }
+        .gap-2 { gap: 1rem; }
+        .gap-3 { gap: 1.5rem; }
+        
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        .hidden { display: none; }
+        .block { display: block; }
+        .inline { display: inline; }
+        .inline-block { display: inline-block; }
+        
+        .rounded { border-radius: 4px; }
+        .rounded-lg { border-radius: 8px; }
+        .rounded-xl { border-radius: 12px; }
+        .rounded-full { border-radius: 50%; }
+        
+        .shadow { box-shadow: var(--shadow); }
+        .shadow-lg { box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        
+        .border { border: 1px solid var(--border-color); }
+        .border-t { border-top: 1px solid var(--border-color); }
+        .border-b { border-bottom: 1px solid var(--border-color); }
+        .border-l { border-left: 1px solid var(--border-color); }
+        .border-r { border-right: 1px solid var(--border-color); }
+        
+        .opacity-50 { opacity: 0.5; }
+        .opacity-75 { opacity: 0.75; }
+        
+        .cursor-pointer { cursor: pointer; }
+        .cursor-not-allowed { cursor: not-allowed; }
+        
+        .select-none { user-select: none; }
+        .select-all { user-select: all; }
+        
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .break-words {
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-logo">
+            <i class="fas fa-seedling"></i> KrishiSphere
+        </div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar"></div>
+        </div>
+        <p>Loading your farm dashboard...</p>
+    </div>
+
+    <!-- Authentication Container -->
+    <div id="authContainer" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <i class="fas fa-seedling"></i> KrishiSphere
+            </div>
+            <p style="margin-bottom: 2rem; color: #666;">Smart Farming Management System</p>
+            
+            <!-- Login Form -->
+            <div id="loginForm">
+                <form id="emailLoginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full">Sign In</button>
+                </form>
+                
+                <div style="margin: 1rem 0; text-align: center; color: #666;">or</div>
+                
+                <button id="googleSignIn" class="btn btn-google">
+                    <i class="fab fa-google"></i> Sign in with Google
+                </button>
+                
+                <button id="phoneSignIn" class="btn btn-phone">
+                    <i class="fas fa-phone"></i> Sign in with Phone
+                </button>
+                
+                <p style="margin-top: 1rem; text-align: center;">
+                    Don't have an account? 
+                    <a href="#" id="showRegister" style="color: var(--primary-color);">Register here</a>
+                </p>
+            </div>
+
+            <!-- Registration Form -->
+            <div id="registerForm" style="display: none;">
+                <form id="emailRegisterForm">
+                    <div class="grid grid-2 gap-2">
+                        <div class="form-group">
+                            <label for="regFirstName">First Name</label>
+                            <input type="text" id="regFirstName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="regLastName">Last Name</label>
+                            <input type="text" id="regLastName" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email Address</label>
+                        <input type="email" id="regEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Password</label>
+                        <input type="password" id="regPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPhone">Phone Number</label>
+                        <input type="tel" id="regPhone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regLocation">Location</label>
+                        <input type="text" id="regLocation" class="form-control" required>
+                    </div>
+                    <div class="grid grid-2 gap-2">
+                        <div class="form-group">
+                            <label for="regFarmSize">Farm Size (acres)</label>
+                            <input type="number" id="regFarmSize" class="form-control" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="regPrimaryCrop">Primary Crop</label>
+                            <select id="regPrimaryCrop" class="form-control" required>
+                                <option value="">Select Crop</option>
+                                <option value="rice">Rice</option>
+                                <option value="wheat">Wheat</option>
+                                <option value="corn">Corn</option>
+                                <option value="cotton">Cotton</option>
+                                <option value="sugarcane">Sugarcane</option>
+                                <option value="pulses">Pulses</option>
+                                <option value="vegetables">Vegetables</option>
+                                <option value="fruits">Fruits</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full">Create Account</button>
+                </form>
+                
+                <p style="margin-top: 1rem; text-align: center;">
+                    Already have an account? 
+                    <a href="#" id="showLogin" style="color: var(--primary-color);">Sign in here</a>
+                </p>
+            </div>
+
+            <!-- Phone OTP Form -->
+            <div id="otpForm" style="display: none;">
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number (with country code)</label>
+                    <input type="tel" id="phoneNumber" class="form-control" placeholder="+91XXXXXXXXXX">
+                </div>
+                <button id="sendOTP" class="btn btn-primary w-full">Send OTP</button>
+                
+                <div id="otpInput" style="display: none; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label for="otpCode">Enter 6-digit OTP</label>
+                        <input type="text" id="otpCode" class="form-control" maxlength="6" placeholder="123456">
+                    </div>
+                    <div id="otpTimer" class="text-center" style="margin-bottom: 1rem; color: #666;"></div>
+                    <button id="verifyOTP" class="btn btn-primary w-full">Verify OTP</button>
+                    <button id="resendOTP" class="btn btn-secondary w-full" style="margin-top: 0.5rem;">Resend OTP</button>
+                </div>
+                
+                <p style="margin-top: 1rem; text-align: center;">
+                    <a href="#" id="backToLogin" style="color: var(--primary-color);">Back to Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="appContainer" class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="app-logo">
+                <i class="fas fa-seedling"></i> KrishiSphere
+            </div>
+            <div class="header-actions">
+                <div class="language-selector">
+                    <select id="languageSelect">
+                        <option value="en">English</option>
+                        <option value="hi">हिंदी</option>
+                        <option value="te">తెలుగు</option>
+                    </select>
+                </div>
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary" id="profileDropdown">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <div class="dropdown-menu" id="profileMenu" style="display: none;">
+                        <a href="#" onclick="showProfile()">Profile</a>
+                        <a href="#" onclick="exportData()">Export Data</a>
+                        <a href="#" onclick="signOut()">Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar Navigation -->
+            <nav class="sidebar">
+                <ul class="sidebar-nav">
+                    <li><a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a></li>
+                    <li><a href="#" onclick="showSection('crops')" id="nav-crops">
+                        <i class="fas fa-seedling"></i> Crop Management
+                    </a></li>
+                    <li><a href="#" onclick="showSection('money')" id="nav-money">
+                        <i class="fas fa-coins"></i> Financial Management
+                    </a></li>
+                    <li><a href="#" onclick="showSection('assets')" id="nav-assets">
+                        <i class="fas fa-tractor"></i> Asset Management
+                    </a></li>
+                    <li><a href="#" onclick="showSection('ideas')" id="nav-ideas">
+                        <i class="fas fa-lightbulb"></i> Smart Ideas
+                    </a></li>
+                    <li><a href="#" onclick="showSection('weather')" id="nav-weather">
+                        <i class="fas fa-cloud-sun"></i> Weather
+                    </a></li>
+                    <li><a href="#" onclick="showSection('profile')" id="nav-profile">
+                        <i class="fas fa-user-cog"></i> Profile & Settings
+                    </a></li>
+                </ul>
+            </nav>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                <!-- Dashboard Section -->
+                <div id="dashboard" class="section">
+                    <h1>Dashboard</h1>
+                    <div class="dashboard-grid">
+                        <!-- Financial Summary Cards -->
+                        <div class="card stat-card">
+                            <i class="fas fa-rupee-sign text-success" style="font-size: 2rem;"></i>
+                            <div class="stat-value" id="totalIncome">₹0</div>
+                            <div class="stat-label">Total Income</div>
+                            <div class="stat-change positive" id="incomeChange">+0% from last month</div>
+                        </div>
+
+                        <div class="card stat-card">
+                            <i class="fas fa-minus-circle text-error" style="font-size: 2rem;"></i>
+                            <div class="stat-value" id="totalExpenses">₹0</div>
+                            <div class="stat-label">Total Expenses</div>
+                            <div class="stat-change negative" id="expenseChange">+0% from last month</div>
+                        </div>
+
+                        <div class="card stat-card">
+                            <i class="fas fa-chart-line text-primary" style="font-size: 2rem;"></i>
+                            <div class="stat-value" id="netProfit">₹0</div>
+                            <div class="stat-label">Net Profit</div>
+                            <div class="stat-change positive" id="profitChange">+0% from last month</div>
+                        </div>
+
+                        <div class="card stat-card">
+                            <i class="fas fa-hand-holding-usd text-warning" style="font-size: 2rem;"></i>
+                            <div class="stat-value" id="activeLoans">₹0</div>
+                            <div class="stat-label">Active Loans</div>
+                            <div class="stat-change neutral" id="loanChange">2 active loans</div>
+                        </div>
+
+                        <!-- Weather Widget -->
+                        <div class="card weather-widget" id="weatherWidget">
+                            <i class="fas fa-sun" style="font-size: 2rem;"></i>
+                            <div class="weather-temp" id="weatherTemp">--°C</div>
+                            <div class="weather-desc" id="weatherDesc">Loading weather...</div>
+                            <div class="weather-details">
+                                <div>Humidity: <span id="weatherHumidity">--%</span></div>
+                                <div>Wind: <span id="weatherWind">-- km/h</span></div>
+                                <div>UV Index: <span id="weatherUV">--</span></div>
+                                <div>Precipitation: <span id="weatherPrecip">--%</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Monthly Insights -->
+                        <div class="card">
+                            <h3>Monthly Insights</h3>
+                            <div class="insights-grid" style="display: grid; gap: 1rem; margin-top: 1rem;">
+                                <div class="insight-item">
+                                    <div class="insight-label">Best Performing Crop</div>
+                                    <div class="insight-value" id="bestCrop">Rice</div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="insight-label">Highest Expense Category</div>
+                                    <div class="insight-value" id="highestExpense">Seeds & Fertilizers</div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="insight-label">ROI This Season</div>
+                                    <div class="insight-value text-success" id="roiSeason">15.2%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <h3>Income vs Expenses (Last 6 Months)</h3>
+                            <div class="chart-container">
+                                <canvas id="incomeExpenseChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Crop Profitability</h3>
+                            <div class="chart-container">
+                                <canvas id="cropProfitChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Calendar -->
+                    <div class="card">
+                        <h3>Activity Calendar</h3>
+                        <div id="activityCalendar" class="activity-calendar">
+                            <!-- Calendar will be generated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Notifications -->
+                    <div class="card">
+                        <h3>Recent Notifications</h3>
+                        <div id="notificationsList" class="notifications-list">
+                            <!-- Notifications will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crop Management Section -->
+                <div id="crops" class="section hidden">
+                    <div class="flex-between mb-3">
+                        <h1>Crop Management</h1>
+                        <button class="btn btn-primary" onclick="showAddCropModal()">
+                            <i class="fas fa-plus"></i> Add Crop
+                        </button>
+                    </div>
+
+                    <!-- Crop Filters -->
+                    <div class="card mb-3">
+                        <div class="flex gap-2 flex-wrap">
+                            <select id="cropStatusFilter" class="form-control" style="width: auto;">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="harvested">Harvested</option>
+                                <option value="planned">Planned</option>
+                            </select>
+                            <select id="cropSeasonFilter" class="form-control" style="width: auto;">
+                                <option value="">All Seasons</option>
+                                <option value="kharif">Kharif</option>
+                                <option value="rabi">Rabi</option>
+                                <option value="zaid">Zaid</option>
+                            </select>
+                            <input type="text" id="cropSearchFilter" class="form-control" placeholder="Search crops..." style="width: auto;">
+                        </div>
+                    </div>
+
+                    <!-- Crop Grid -->
+                    <div id="cropGrid" class="crop-grid">
+                        <!-- Crops will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Financial Management Section -->
+                <div id="money" class="section hidden">
+                    <div class="flex-between mb-3">
+                        <h1>Financial Management</h1>
+                        <div class="flex gap-2">
+                            <button class="btn btn-primary" onclick="showAddTransactionModal()">
+                                <i class="fas fa-plus"></i> Add Transaction
+                            </button>
+                            <button class="btn btn-secondary" onclick="showLoanCalculator()">
+                                <i class="fas fa-calculator"></i> Loan Calculator
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Financial Summary -->
+                    <div class="dashboard-grid mb-3">
+                        <div class="card stat-card">
+                            <div class="stat-value text-success" id="monthlyIncome">₹0</div>
+                            <div class="stat-label">This Month Income</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value text-error" id="monthlyExpenses">₹0</div>
+                            <div class="stat-label">This Month Expenses</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value text-primary" id="monthlyProfit">₹0</div>
+                            <div class="stat-label">Monthly Profit</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value text-warning" id="cashFlow">₹0</div>
+                            <div class="stat-label">Cash Flow</div>
+                        </div>
+                    </div>
+
+                    <!-- Transaction Filters -->
+                    <div class="card mb-3">
+                        <div class="flex gap-2 flex-wrap">
+                            <select id="transactionTypeFilter" class="form-control" style="width: auto;">
+                                <option value="">All Types</option>
+                                <option value="income">Income</option>
+                                <option value="expense">Expense</option>
+                            </select>
+                            <select id="transactionCategoryFilter" class="form-control" style="width: auto;">
+                                <option value="">All Categories</option>
+                                <option value="crop-sale">Crop Sale</option>
+                                <option value="seeds">Seeds</option>
+                                <option value="fertilizers">Fertilizers</option>
+                                <option value="equipment">Equipment</option>
+                                <option value="labor">Labor</option>
+                                <option value="loan">Loan</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <select id="transactionPeriodFilter" class="form-control" style="width: auto;">
+                                <option value="month">This Month</option>
+                                <option value="quarter">This Quarter</option>
+                                <option value="year">This Year</option>
+                                <option value="all">All Time</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                            <input type="text" id="transactionSearchFilter" class="form-control" placeholder="Search transactions..." style="width: auto;">
+                        </div>
+                    </div>
+
+                    <!-- Transaction Chart -->
+                    <div class="card mb-3">
+                        <h3>Cash Flow Trend</h3>
+                        <div class="chart-container">
+                            <canvas id="cashFlowChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Transactions Table -->
+                    <div class="card">
+                        <h3>Recent Transactions</h3>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Category</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactionsTableBody">
+                                    <!-- Transactions will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Asset Management Section -->
+                <div id="assets" class="section hidden">
+                    <div class="flex-between mb-3">
+                        <h1>Asset Management</h1>
+                        <button class="btn btn-primary" onclick="showAddAssetModal()">
+                            <i class="fas fa-plus"></i> Add Asset
+                        </button>
+                    </div>
+
+                    <!-- Asset Categories -->
+                    <div class="dashboard-grid mb-3">
+                        <div class="card text-center cursor-pointer" onclick="filterAssets('equipment')">
+                            <i class="fas fa-tractor text-primary" style="font-size: 2rem;"></i>
+                            <h3 class="mt-2">Equipment</h3>
+                            <p class="text-secondary" id="equipmentCount">0 items</p>
+                        </div>
+                        <div class="card text-center cursor-pointer" onclick="filterAssets('livestock')">
+                            <i class="fas fa-horse text-primary" style="font-size: 2rem;"></i>
+                            <h3 class="mt-2">Livestock</h3>
+                            <p class="text-secondary" id="livestockCount">0 items</p>
+                        </div>
+                        <div class="card text-center cursor-pointer" onclick="filterAssets('land')">
+                            <i class="fas fa-map text-primary" style="font-size: 2rem;"></i>
+                            <h3 class="mt-2">Land</h3>
+                            <p class="text-secondary" id="landCount">0 plots</p>
+                        </div>
+                        <div class="card text-center cursor-pointer" onclick="filterAssets('inventory')">
+                            <i class="fas fa-boxes text-primary" style="font-size: 2rem;"></i>
+                            <h3 class="mt-2">Inventory</h3>
+                            <p class="text-secondary" id="inventoryCount">0 items</p>
+                        </div>
+                    </div>
+
+                    <!-- Asset List -->
+                    <div id="assetsList" class="crop-grid">
+                        <!-- Assets will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Smart Ideas Section -->
+                <div id="ideas" class="section hidden">
+                    <div class="flex-between mb-3">
+                        <h1>Smart Farming Ideas</h1>
+                        <button class="btn btn-primary" onclick="refreshIdeas()">
+                            <i class="fas fa-sync-alt"></i> Refresh Ideas
+                        </button>
+                    </div>
+
+                    <!-- Ideas Categories -->
+                    <div class="card mb-3">
+                        <div class="flex gap-2 flex-wrap">
+                            <button class="btn btn-secondary active" onclick="filterIdeas('all')">All Ideas</button>
+                            <button class="btn btn-secondary" onclick="filterIdeas('crop')">Crop</button>
+                            <button class="btn btn-secondary" onclick="filterIdeas('financial')">Financial</button>
+                            <button class="btn btn-secondary" onclick="filterIdeas('technology')">Technology</button>
+                            <button class="btn btn-secondary" onclick="filterIdeas('market')">Market</button>
+                        </div>
+                    </div>
+
+                    <!-- Ideas Grid -->
+                    <div id="ideasGrid" class="crop-grid">
+                        <!-- Ideas will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Weather Section -->
+                <div id="weather" class="section hidden">
+                    <h1>Weather Information</h1>
+                    
+                    <!-- Location Input -->
+                    <div class="card mb-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="weatherLocation" class="form-control" placeholder="Enter location (e.g., Delhi, India)">
+                            <button class="btn btn-primary" onclick="getWeatherByLocation()">
+                                <i class="fas fa-search"></i> Get Weather
+                            </button>
+                            <button class="btn btn-secondary" onclick="getCurrentLocationWeather()">
+                                <i class="fas fa-location-arrow"></i> Current Location
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Current Weather -->
+                    <div class="dashboard-grid mb-3">
+                        <div class="card weather-widget">
+                            <h3>Current Weather</h3>
+                            <div id="currentWeatherLocation">--</div>
+                            <div class="weather-temp" id="currentTemp">--°C</div>
+                            <div class="weather-desc" id="currentDesc">--</div>
+                            <div class="weather-details">
+                                <div>Feels like: <span id="feelsLike">--°C</span></div>
+                                <div>Humidity: <span id="currentHumidity">--%</span></div>
+                                <div>Wind: <span id="currentWind">-- km/h</span></div>
+                                <div>Pressure: <span id="currentPressure">-- hPa</span></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Agricultural Conditions</h3>
+                            <div class="weather-details">
+                                <div>UV Index: <span id="uvIndex" class="text-warning">--</span></div>
+                                <div>Soil Temperature: <span id="soilTemp">--°C</span></div>
+                                <div>Precipitation: <span id="precipitation">-- mm</span></div>
+                                <div>Visibility: <span id="visibility">-- km</span></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Farming Alerts</h3>
+                            <div id="farmingAlerts" class="farming-alerts">
+                                <!-- Alerts will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5-Day Forecast -->
+                    <div class="card mb-3">
+                        <h3>5-Day Forecast</h3>
+                        <div id="weatherForecast" class="weather-forecast grid grid-5 gap-2">
+                            <!-- Forecast will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Hourly Forecast Chart -->
+                    <div class="card">
+                        <h3>24-Hour Temperature Trend</h3>
+                        <div class="chart-container">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile & Settings Section -->
+                <div id="profile" class="section hidden">
+                    <h1>Profile & Settings</h1>
+                    
+                    <div class="dashboard-grid">
+                        <!-- Profile Information -->
+                        <div class="card">
+                            <h3>Profile Information</h3>
+                            <form id="profileForm">
+                                <div class="form-group">
+                                    <label for="profileName">Full Name</label>
+                                    <input type="text" id="profileName" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileEmail">Email</label>
+                                    <input type="email" id="profileEmail" class="form-control" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="profilePhone">Phone</label>
+                                    <input type="tel" id="profilePhone" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileLocation">Location</label>
+                                    <input type="text" id="profileLocation" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profileFarmSize">Farm Size (acres)</label>
+                                    <input type="number" id="profileFarmSize" class="form-control" step="0.1">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Profile</button>
+                            </form>
+                        </div>
+
+                        <!-- Farm Statistics -->
+                        <div class="card">
+                            <h3>Farm Statistics</h3>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-label">Total Crops</div>
+                                    <div class="stat-value" id="statTotalCrops">0</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Active Crops</div>
+                                    <div class="stat-value" id="statActiveCrops">0</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Total Transactions</div>
+                                    <div class="stat-value" id="statTotalTransactions">0</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Farm Assets</div>
+                                    <div class="stat-value" id="statTotalAssets">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- App Settings -->
+                        <div class="card">
+                            <h3>App Settings</h3>
+                            <div class="form-group">
+                                <label>Theme</label>
+                                <div class="flex gap-2">
+                                    <button class="btn btn-secondary" onclick="setTheme('light')">Light</button>
+                                    <button class="btn btn-secondary" onclick="setTheme('dark')">Dark</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="settingsLanguage">Language</label>
+                                <select id="settingsLanguage" class="form-control" onchange="changeLanguage(this.value)">
+                                    <option value="en">English</option>
+                                    <option value="hi">हिंदी</option>
+                                    <option value="te">తెలుగు</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Notifications</label>
+                                <div class="checkbox-group">
+                                    <label>
+                                        <input type="checkbox" id="notifHarvest" checked> Harvest Reminders
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" id="notifWeather" checked> Weather Alerts
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" id="notifLoans" checked> Loan Reminders
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Management -->
+                        <div class="card">
+                            <h3>Data Management</h3>
+                            <div class="flex-column gap-2">
+                                <button class="btn btn-primary" onclick="exportAllData()">
+                                    <i class="fas fa-download"></i> Export All Data (PDF)
+                                </button>
+                                <button class="btn btn-secondary" onclick="backupData()">
+                                    <i class="fas fa-cloud-upload-alt"></i> Backup to Cloud
+                                </button>
+                                <button class="btn btn-warning" onclick="clearAllData()">
+                                    <i class="fas fa-trash"></i> Clear All Data
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Support -->
+                        <div class="card">
+                            <h3>Support & Help</h3>
+                            <div class="flex-column gap-2">
+                                <button class="btn btn-secondary" onclick="showHelpModal()">
+                                    <i class="fas fa-question-circle"></i> Help & FAQ
+                                </button>
+                                <button class="btn btn-secondary" onclick="contactSupport()">
+                                    <i class="fas fa-envelope"></i> Contact Support
+                                </button>
+                                <button class="btn btn-secondary" onclick="reportBug()">
+                                    <i class="fas fa-bug"></i> Report Bug
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Mobile Navigation -->
+        <nav class="mobile-nav">
+            <div class="mobile-nav-items">
+                <a href="#" onclick="showSection('dashboard')" class="mobile-nav-item active">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" onclick="showSection('crops')" class="mobile-nav-item">
+                    <i class="fas fa-seedling"></i>
+                    <span>Crops</span>
+                </a>
+                <a href="#" onclick="showSection('money')" class="mobile-nav-item">
+                    <i class="fas fa-coins"></i>
+                    <span>Money</span>
+                </a>
+                <a href="#" onclick="showSection('assets')" class="mobile-nav-item">
+                    <i class="fas fa-tractor"></i>
+                    <span>Assets</span>
+                </a>
+                <a href="#" onclick="showSection('profile')" class="mobile-nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Floating Action Button -->
+        <button class="fab" id="fabButton" onclick="showQuickActions()">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Crop Modal -->
+    <div id="addCropModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Crop</h2>
+                <button class="close-modal" onclick="closeModal('addCropModal')">&times;</button>
+            </div>
+            <form id="addCropForm">
+                <div class="grid grid-2 gap-2">
+                    <div class="form-group">
+                        <label for="cropName">Crop Name</label>
+                        <select id="cropName" class="form-control" required>
+                            <option value="">Select Crop</option>
+                            <option value="rice">Rice</option>
+                            <option value="wheat">Wheat</option>
+                            <option value="corn">Corn</option>
+                            <option value="cotton">Cotton</option>
+                            <option value="sugarcane">Sugarcane</option>
+                            <option value="pulses">Pulses</option>
+                            <option value="vegetables">Vegetables</option>
+                            <option value="fruits">Fruits</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cropVariety">Variety</label>
+                        <input type="text" id="cropVariety" class="form-control">
+                    </div>
+                </div>
+                <div class="grid grid-3 gap-2">
+                    <div class="form-group">
+                        <label for="cropArea">Area (acres)</label>
+                        <input type="number" id="cropArea" class="form-control" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cropSeason">Season</label>
+                        <select id="cropSeason" class="form-control" required>
+                            <option value="">Select Season</option>
+                            <option value="kharif">Kharif (June-Oct)</option>
+                            <option value="rabi">Rabi (Nov-Apr)</option>
+                            <option value="zaid">Zaid (May-June)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cropLocation">Location</label>
+                        <input type="text" id="cropLocation" class="form-control">
+                    </div>
+                </div>
+                <div class="grid grid-2 gap-2">
+                    <div class="form-group">
+                        <label for="sowingDate">Sowing Date</label>
+                        <input type="date" id="sowingDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expectedHarvest">Expected Harvest Date</label>
+                        <input type="date" id="expectedHarvest" class="form-control" required>
+                    </div>
+                </div>
+                <div class="grid grid-2 gap-2">
+                    <div class="form-group">
+                        <label for="expectedYield">Expected Yield (tons)</label>
+                        <input type="number" id="expectedYield" class="form-control" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="expectedPrice">Expected Price (₹/ton)</label>
+                        <input type="number" id="expectedPrice" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cropNotes">Notes</label>
+                    <textarea id="cropNotes" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary">Add Crop</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCropModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div id="addTransactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Transaction</h2>
+                <button class="close-modal" onclick="closeModal('addTransactionModal')">&times;</button>
+            </div>
+            <form id="addTransactionForm">
+                <div class="grid grid-2 gap-2">
+                    <div class="form-group">
+                        <label for="transactionType">Type</label>
+                        <select id="transactionType" class="form-control" required onchange="updateTransactionCategories()">
+                            <option value="">Select Type</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="transactionCategory">Category</label>
+                        <select id="transactionCategory" class="form-control" required>
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="transactionDescription">Description</label>
+                    <input type="text" id="transactionDescription" class="form-control" required>
+                </div>
+                <div class="grid grid-2 gap-2">
+                    <div class="form-group">
+                        <label for="transactionAmount">Amount (₹)</label>
+                        <input type="number" id="transactionAmount" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transactionDate">Date</label>
+                        <input type="date" id="transactionDate" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="transactionPaymentMethod">Payment Method</label>
+                    <select id="transactionPaymentMethod" class="form-control">
+                        <option value="cash">Cash</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="check">Check</option>
+                        <option value="digital">Digital Payment</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="transactionNotes">Notes</label>
+                    <textarea id="transactionNotes" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary">Add Transaction</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addTransactionModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loan Calculator Modal -->
+    <div id="loanCalculatorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Loan Calculator</h2>
+                <button class="close-modal" onclick="closeModal('loanCalculatorModal')">&times;</button>
+            </div>
+            <div class="grid grid-2 gap-3">
+                <div>
+                    <h3>Loan Details</h3>
+                    <div class="form-group">
+                        <label for="loanPrincipal">Principal Amount (₹)</label>
+                        <input type="number" id="loanPrincipal" class="form-control" oninput="calculateLoan()">
+                    </div>
+                    <div class="form-group">
+                        <label for="loanRate">Interest Rate (%)</label>
+                        <input type="number" id="loanRate" class="form-control" step="0.1" oninput="calculateLoan()">
+                    </div>
+                    <div class="form-group">
+                        <label for="loanTerm">Term (months)</label>
+                        <input type="number" id="loanTerm" class="form-control" oninput="calculateLoan()">
+                    </div>
+                    <div class="form-group">
+                        <label for="loanType">Interest Type</label>
+                        <select id="loanType" class="form-control" onchange="calculateLoan()">
+                            <option value="compound">Compound</option>
+                            <option value="simple">Simple</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <h3>Calculation Results</h3>
+                    <div class="loan-results">
+                        <div class="result-item">
+                            <div class="result-label">Monthly EMI</div>
+                            <div class="result-value" id="monthlyEMI">₹0</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">Total Interest</div>
+                            <div class="result-value" id="totalInterest">₹0</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">Total Amount</div>
+                            <div class="result-value" id="totalAmount">₹0</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-full" onclick="saveLoan()">Save Loan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Asset Modal -->
+    <div id="addAssetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Asset</h2>
+                <button class="close-modal" onclick="closeModal('addAssetModal')">&times;</button>
+            </div>
+            <form id="addAssetForm">
+                <div class="grid grid-2 gap-2">
+                    <div class="form-group">
+                        <label for="assetType">Asset Type</label>
+                        <select id="assetType" class="form-control" required onchange="updateAssetFields()">
+                            <option value="">Select Type</option>
+                            <option value="equipment">Equipment</option>
+                            <option value="livestock">Livestock</option>
+                            <option value="land">Land</option>
+                            <option value="inventory">Inventory</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assetName">Name</label>
+                        <input type="text" id="assetName" class="form-control" required>
+                    </div>
+                </div>
+                <div class="grid grid-2 gap-2">
+                    <div class="form-group">
+                        <label for="assetPurchaseDate">Purchase Date</label>
+                        <input type="date" id="assetPurchaseDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="assetPurchasePrice">Purchase Price (₹)</label>
+                        <input type="number" id="assetPurchasePrice" class="form-control" step="0.01">
+                    </div>
+                </div>
+                <div id="equipmentFields" class="hidden">
+                    <div class="grid grid-2 gap-2">
+                        <div class="form-group">
+                            <label for="equipmentCondition">Condition</label>
+                            <select id="equipmentCondition" class="form-control">
+                                <option value="excellent">Excellent</option>
+                                <option value="good">Good</option>
+                                <option value="fair">Fair</option>
+                                <option value="poor">Poor</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="equipmentMaintenanceCost">Annual Maintenance (₹)</label>
+                            <input type="number" id="equipmentMaintenanceCost" class="form-control" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                <div id="livestockFields" class="hidden">
+                    <div class="grid grid-3 gap-2">
+                        <div class="form-group">
+                            <label for="animalCount">Count</label>
+                            <input type="number" id="animalCount" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="animalBreed">Breed</label>
+                            <input type="text" id="animalBreed" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="animalHealth">Health Status</label>
+                            <select id="animalHealth" class="form-control">
+                                <option value="healthy">Healthy</option>
+                                <option value="sick">Sick</option>
+                                <option value="recovering">Recovering</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="landFields" class="hidden">
+                    <div class="grid grid-2 gap-2">
+                        <div class="form-group">
+                            <label for="landSize">Size (acres)</label>
+                            <input type="number" id="landSize" class="form-control" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="landType">Land Type</label>
+                            <select id="landType" class="form-control">
+                                <option value="owned">Owned</option>
+                                <option value="leased">Leased</option>
+                                <option value="rented">Rented</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="inventoryFields" class="hidden">
+                    <div class="grid grid-2 gap-2">
+                        <div class="form-group">
+                            <label for="inventoryQuantity">Quantity</label>
+                            <input type="number" id="inventoryQuantity" class="form-control" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="inventoryUnit">Unit</label>
+                            <select id="inventoryUnit" class="form-control">
+                                <option value="kg">Kg</option>
+                                <option value="tons">Tons</option>
+                                <option value="liters">Liters</option>
+                                <option value="pieces">Pieces</option>
+                                <option value="bags">Bags</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="assetNotes">Notes</label>
+                    <textarea id="assetNotes" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary">Add Asset</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addAssetModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdfgtj1gvZ-bkomW1V40h-4tyUPHy_peo",
+            authDomain: "jama-3f427.firebaseapp.com",
+            projectId: "jama-3f427",
+            storageBucket: "jama-3f427.firebasestorage.app",
+            messagingSenderId: "897112470741",
+            appId: "1:897112470741:web:ee6388f0faae459fcb1e5c",
+            measurementId: "G-NN1BRV0QKS"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Weather API Configuration
+        const WEATHER_API_KEY = '1G7YyF7MlPU3v0bx8oAL36JWwDziEgH5';
+        const WEATHER_API_BASE = 'https://api.tomorrow.io/v4/weather';
+
+        // Global Variables
+        let currentUser = null;
+        let currentSection = 'dashboard';
+        let currentLanguage = 'en';
+        let currentTheme = 'light';
+        let otpTimer = null;
+        let confirmationResult = null;
+
+        // Language Translations
+        const translations = {
+            en: {
+                dashboard: 'Dashboard',
+                crops: 'Crop Management',
+                money: 'Financial Management',
+                assets: 'Asset Management',
+                ideas: 'Smart Ideas',
+                weather: 'Weather',
+                profile: 'Profile & Settings'
+            },
+            hi: {
+                dashboard: 'डैशबोर्ड',
+                crops: 'फसल प्रबंधन',
+                money: 'वित्तीय प्रबंधन',
+                assets: 'संपत्ति प्रबंधन',
+                ideas: 'स्मार्ट विचार',
+                weather: 'मौसम',
+                profile: 'प्रोफ़ाइल और सेटिंग्स'
+            },
+            te: {
+                dashboard: 'డ్యాష్‌బోర్డ్',
+                crops: 'పంట నిర్వహణ',
+                money: 'ఆర్థిక నిర్వహణ',
+                assets: 'ఆస్తి నిర్వహణ',
+                ideas: 'స్మార్ట్ ఆలోచనలు',
+                weather: 'వాతావరణం',
+                profile: 'ప్రొఫైల్ & సెట్టింగ్స్'
+            }
+        };
+
+        // Local Storage Keys
+        const STORAGE_KEYS = {
+            USER_DATA: 'krishisphere_user_data',
+            CROPS: 'krishisphere_crops',
+            TRANSACTIONS: 'krishisphere_transactions',
+            ASSETS: 'krishisphere_assets',
+            SETTINGS: 'krishisphere_settings',
+            WEATHER_CACHE: 'krishisphere_weather_cache'
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            // Show loading screen
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+                checkAuthState();
+            }, 3000);
+
+            // Initialize event listeners
+            initializeEventListeners();
+            
+            // Load settings
+            loadSettings();
+            
+            // Initialize charts
+            initializeCharts();
+        }
+
+        function initializeEventListeners() {
+            // Authentication form handlers
+            document.getElementById('emailLoginForm').addEventListener('submit', handleEmailLogin);
+            document.getElementById('emailRegisterForm').addEventListener('submit', handleEmailRegister);
+            document.getElementById('googleSignIn').addEventListener('click', handleGoogleSignIn);
+            document.getElementById('phoneSignIn').addEventListener('click', showPhoneAuth);
+            document.getElementById('sendOTP').addEventListener('click', sendOTP);
+            document.getElementById('verifyOTP').addEventListener('click', verifyOTP);
+            document.getElementById('resendOTP').addEventListener('click', resendOTP);
+
+            // Form toggle handlers
+            document.getElementById('showRegister').addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleAuthForm('register');
+            });
+            document.getElementById('showLogin').addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleAuthForm('login');
+            });
+            document.getElementById('backToLogin').addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleAuthForm('login');
+            });
+
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Language change
+            document.getElementById('languageSelect').addEventListener('change', (e) => {
+                changeLanguage(e.target.value);
+            });
+
+            // Add crop form
+            document.getElementById('addCropForm').addEventListener('submit', handleAddCrop);
+            
+            // Add transaction form
+            document.getElementById('addTransactionForm').addEventListener('submit', handleAddTransaction);
+            
+            // Add asset form
+            document.getElementById('addAssetForm').addEventListener('submit', handleAddAsset);
+
+            // Profile form
+            document.getElementById('profileForm').addEventListener('submit', handleUpdateProfile);
+
+            // Close modals when clicking outside
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    closeModal(e.target.id);
+                }
+            });
+        }
+
+        // Authentication Functions
+        function checkAuthState() {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('authContainer').style.display = 'none';
+                    document.getElementById('appContainer').style.display = 'block';
+                    loadUserData();
+                    initializeDashboard();
+                } else {
+                    document.getElementById('authContainer').style.display = 'flex';
+                    document.getElementById('appContainer').style.display = 'none';
+                }
+            });
+        }
+
+        async function handleEmailLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                showNotification('Signing in...', 'info');
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('Login successful!', 'success');
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function handleEmailRegister(e) {
+            e.preventDefault();
+            const formData = {
+                firstName: document.getElementById('regFirstName').value,
+                lastName: document.getElementById('regLastName').value,
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPassword').value,
+                phone: document.getElementById('regPhone').value,
+                location: document.getElementById('regLocation').value,
+                farmSize: parseFloat(document.getElementById('regFarmSize').value),
+                primaryCrop: document.getElementById('regPrimaryCrop').value
+            };
+
+            try {
+                showNotification('Creating account...', 'info');
+                const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
+                
+                // Save additional user data to Firestore
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    ...formData,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showNotification('Account created successfully!', 'success');
+            } catch (error) {
+                console.error('Registration error:', error);
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function handleGoogleSignIn() {
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                showNotification('Signing in with Google...', 'info');
+                await auth.signInWithPopup(provider);
+                showNotification('Google sign-in successful!', 'success');
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+                showNotification(error.message, 'error');
+            }
+        }
+
+        function showPhoneAuth() {
+            toggleAuthForm('otp');
+        }
+
+        async function sendOTP() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            
+            try {
+                const appVerifier = new firebase.auth.RecaptchaVerifier('sendOTP', {
+                    size: 'invisible'
+                });
+                
+                confirmationResult = await auth.signInWithPhoneNumber(phoneNumber, appVerifier);
+                document.getElementById('otpInput').style.display = 'block';
+                startOTPTimer();
+                showNotification('OTP sent successfully!', 'success');
+            } catch (error) {
+                console.error('OTP send error:', error);
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function verifyOTP() {
+            const otpCode = document.getElementById('otpCode').value;
+            
+            try {
+                await confirmationResult.confirm(otpCode);
+                showNotification('Phone verification successful!', 'success');
+            } catch (error) {
+                console.error('OTP verification error:', error);
+                showNotification(error.message, 'error');
+            }
+        }
+
+        function resendOTP() {
+            sendOTP();
+        }
+
+        function startOTPTimer() {
+            let timeLeft = 60;
+            const timerElement = document.getElementById('otpTimer');
+            
+            otpTimer = setInterval(() => {
+                timerElement.textContent = `Resend OTP in ${timeLeft}s`;
+                timeLeft--;
+                
+                if (timeLeft < 0) {
+                    clearInterval(otpTimer);
+                    timerElement.textContent = '';
+                }
+            }, 1000);
+        }
+
+        function toggleAuthForm(formType) {
+            document.getElementById('loginForm').style.display = formType === 'login' ? 'block' : 'none';
+            document.getElementById('registerForm').style.display = formType === 'register' ? 'block' : 'none';
+            document.getElementById('otpForm').style.display = formType === 'otp' ? 'block' : 'none';
+        }
+
+        async function signOut() {
+            try {
+                await auth.signOut();
+                showNotification('Signed out successfully!', 'success');
+            } catch (error) {
+                console.error('Sign out error:', error);
+                showNotification('Error signing out', 'error');
+            }
+        }
+
+        // User Data Functions
+        async function loadUserData() {
+            try {
+                // Load user profile from Firestore
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    populateProfileForm(userData);
+                }
+
+                // Load local data
+                loadCrops();
+                loadTransactions();
+                loadAssets();
+                loadWeatherData();
+                updateDashboardStats();
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                // Fall back to local storage
+                loadLocalData();
+            }
+        }
+
+        function loadLocalData() {
+            loadCrops();
+            loadTransactions();
+            loadAssets();
+            updateDashboardStats();
+        }
+
+        function populateProfileForm(userData) {
+            document.getElementById('profileName').value = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+            document.getElementById('profileEmail').value = userData.email || currentUser.email;
+            document.getElementById('profilePhone').value = userData.phone || '';
+            document.getElementById('profileLocation').value = userData.location || '';
+            document.getElementById('profileFarmSize').value = userData.farmSize || '';
+        }
+
+        // Navigation Functions
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Show selected section
+            document.getElementById(sectionName).classList.remove('hidden');
+
+            // Update active navigation
+            document.querySelectorAll('.sidebar-nav a, .mobile-nav-item').forEach(nav => {
+                nav.classList.remove('active');
+            });
+            document.getElementById(`nav-${sectionName}`).classList.add('active');
+            document.querySelector(`.mobile-nav-item[onclick="showSection('${sectionName}')"]`)?.classList.add('active');
+
+            currentSection = sectionName;
+
+            // Load section-specific data
+            if (sectionName === 'dashboard') {
+                initializeDashboard();
+            } else if (sectionName === 'crops') {
+                loadCrops();
+            } else if (sectionName === 'money') {
+                loadTransactions();
+            } else if (sectionName === 'assets') {
+                loadAssets();
+            } else if (sectionName === 'weather') {
+                loadWeatherData();
+            }
+        }
+
+        // Dashboard Functions
+        function initializeDashboard() {
+            updateDashboardStats();
+            loadWeatherData();
+            generateActivityCalendar();
+            loadNotifications();
+            initializeCharts();
+        }
+
+        function updateDashboardStats() {
+            const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            
+            let totalIncome = 0;
+            let totalExpenses = 0;
+            let activeLoans = 0;
+
+            transactions.forEach(transaction => {
+                if (transaction.type === 'income') {
+                    totalIncome += transaction.amount;
+                } else if (transaction.type === 'expense') {
+                    totalExpenses += transaction.amount;
+                }
+                if (transaction.category === 'loan') {
+                    activeLoans += transaction.amount;
+                }
+            });
+
+            const netProfit = totalIncome - totalExpenses;
+
+            document.getElementById('totalIncome').textContent = `₹${totalIncome.toLocaleString('en-IN')}`;
+            document.getElementById('totalExpenses').textContent = `₹${totalExpenses.toLocaleString('en-IN')}`;
+            document.getElementById('netProfit').textContent = `₹${netProfit.toLocaleString('en-IN')}`;
+            document.getElementById('activeLoans').textContent = `₹${activeLoans.toLocaleString('en-IN')}`;
+
+            // Update monthly stats
+            updateMonthlyStats(transactions);
+            
+            // Update insights
+            updateInsights(crops, transactions);
+            
+            // Update profile stats
+            updateProfileStats(crops, transactions);
+        }
+
+        function updateMonthlyStats(transactions) {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            
+            let monthlyIncome = 0;
+            let monthlyExpenses = 0;
+            
+            transactions.forEach(transaction => {
+                const transactionDate = new Date(transaction.date);
+                if (transactionDate.getMonth() === currentMonth && transactionDate.getFullYear() === currentYear) {
+                    if (transaction.type === 'income') {
+                        monthlyIncome += transaction.amount;
+                    } else {
+                        monthlyExpenses += transaction.amount;
+                    }
+                }
+            });
+            
+            const monthlyProfit = monthlyIncome - monthlyExpenses;
+            const cashFlow = monthlyIncome - monthlyExpenses;
+            
+            document.getElementById('monthlyIncome').textContent = `₹${monthlyIncome.toLocaleString('en-IN')}`;
+            document.getElementById('monthlyExpenses').textContent = `₹${monthlyExpenses.toLocaleString('en-IN')}`;
+            document.getElementById('monthlyProfit').textContent = `₹${monthlyProfit.toLocaleString('en-IN')}`;
+            document.getElementById('cashFlow').textContent = `₹${cashFlow.toLocaleString('en-IN')}`;
+        }
+
+        function updateInsights(crops, transactions) {
+            // Find best performing crop
+            const cropProfits = {};
+            crops.forEach(crop => {
+                if (crop.status === 'harvested' && crop.actualYield && crop.sellPrice) {
+                    const profit = (crop.actualYield * crop.sellPrice) - (crop.totalExpenses || 0);
+                    cropProfits[crop.name] = (cropProfits[crop.name] || 0) + profit;
+                }
+            });
+            
+            const bestCrop = Object.keys(cropProfits).reduce((a, b) => cropProfits[a] > cropProfits[b] ? a : b, 'N/A');
+            document.getElementById('bestCrop').textContent = bestCrop;
+            
+            // Find highest expense category
+            const expenseCategories = {};
+            transactions.filter(t => t.type === 'expense').forEach(transaction => {
+                expenseCategories[transaction.category] = (expenseCategories[transaction.category] || 0) + transaction.amount;
+            });
+            
+            const highestExpense = Object.keys(expenseCategories).reduce((a, b) => expenseCategories[a] > expenseCategories[b] ? a : b, 'N/A');
+            document.getElementById('highestExpense').textContent = highestExpense.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function updateProfileStats(crops, transactions) {
+            const assets = JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSETS) || '[]');
+            
+            document.getElementById('statTotalCrops').textContent = crops.length;
+            document.getElementById('statActiveCrops').textContent = crops.filter(c => c.status === 'active').length;
+            document.getElementById('statTotalTransactions').textContent = transactions.length;
+            document.getElementById('statTotalAssets').textContent = assets.length;
+        }
+
+        function generateActivityCalendar() {
+            const calendar = document.getElementById('activityCalendar');
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            let calendarHTML = `<h4>${monthNames[currentMonth]} ${currentYear}</h4>`;
+            calendarHTML += '<div class="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; margin-top: 1rem;">';
+            
+            // Days of week header
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+                calendarHTML += `<div class="calendar-day-header" style="padding: 0.5rem; text-align: center; font-weight: bold; background: var(--border-color);">${day}</div>`;
+            });
+            
+            // Get first day and days in month
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            // Empty cells for days before month starts
+            for (let i = 0; i < firstDay; i++) {
+                calendarHTML += '<div class="calendar-day-empty" style="padding: 1rem; background: var(--background-light);"></div>';
+            }
+            
+            // Days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const isToday = day === today.getDate();
+                const hasActivity = Math.random() > 0.7; // Simulate activity
+                
+                calendarHTML += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasActivity ? 'has-activity' : ''}" 
+                    style="padding: 1rem; background: var(--card-bg); border: 1px solid var(--border-color); position: relative; cursor: pointer;
+                    ${isToday ? 'background: var(--primary-color); color: white;' : ''}
+                    ${hasActivity ? 'border-left: 3px solid var(--accent-color);' : ''}">
+                    ${day}
+                    ${hasActivity ? '<div style="position: absolute; bottom: 2px; right: 2px; width: 6px; height: 6px; background: var(--accent-color); border-radius: 50%;"></div>' : ''}
+                </div>`;
+            }
+            
+            calendarHTML += '</div>';
+            calendar.innerHTML = calendarHTML;
+        }
+
+        function loadNotifications() {
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            const notifications = [];
+            const today = new Date();
+            
+            crops.forEach(crop => {
+                if (crop.status === 'active') {
+                    const harvestDate = new Date(crop.expectedHarvest);
+                    const daysToHarvest = Math.ceil((harvestDate - today) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysToHarvest <= 7 && daysToHarvest > 0) {
+                        notifications.push({
+                            type: 'warning',
+                            message: `${crop.name} harvest due in ${daysToHarvest} days`,
+                            date: new Date().toLocaleDateString()
+                        });
+                    } else if (daysToHarvest <= 0) {
+                        notifications.push({
+                            type: 'error',
+                            message: `${crop.name} harvest is overdue`,
+                            date: new Date().toLocaleDateString()
+                        });
+                    }
+                }
+            });
+            
+            // Add some example notifications
+            if (notifications.length === 0) {
+                notifications.push(
+                    { type: 'success', message: 'Weather conditions are favorable for planting', date: new Date().toLocaleDateString() },
+                    { type: 'info', message: 'Monthly financial report is ready', date: new Date().toLocaleDateString() },
+                    { type: 'warning', message: 'Fertilizer inventory running low', date: new Date().toLocaleDateString() }
+                );
+            }
+            
+            const notificationsList = document.getElementById('notificationsList');
+            notificationsList.innerHTML = notifications.map(notification => `
+                <div class="notification-item" style="padding: 0.75rem; margin-bottom: 0.5rem; border-left: 3px solid var(--${notification.type === 'success' ? 'success' : notification.type === 'warning' ? 'warning' : notification.type === 'error' ? 'error' : 'primary'}-color); background: rgba(${notification.type === 'success' ? '76,175,80' : notification.type === 'warning' ? '255,152,0' : notification.type === 'error' ? '244,67,54' : '46,125,50'}, 0.1); border-radius: 4px;">
+                    <div style="font-weight: 500;">${notification.message}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">${notification.date}</div>
+                </div>
+            `).join('');
+        }
+
+        // Crop Management Functions
+        function loadCrops() {
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            displayCrops(crops);
+        }
+
+        function displayCrops(crops) {
+            const cropGrid = document.getElementById('cropGrid');
+            
+            if (crops.length === 0) {
+                cropGrid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                        <i class="fas fa-seedling" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                        <h3>No crops added yet</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Start by adding your first crop to track its progress and profitability.</p>
+                        <button class="btn btn-primary" onclick="showAddCropModal()">
+                            <i class="fas fa-plus"></i> Add Your First Crop
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            cropGrid.innerHTML = crops.map(crop => {
+                const progress = calculateCropProgress(crop);
+                const weatherInfo = getCropWeatherInfo(crop);
+                
+                return `
+                    <div class="card crop-card">
+                        <div class="crop-header">
+                            <div class="crop-name">${crop.name} (${crop.variety || 'Standard'})</div>
+                            <div class="crop-status ${crop.status}">${crop.status.charAt(0).toUpperCase() + crop.status.slice(1)}</div>
+                        </div>
+                        
+                        <div class="crop-info" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                            <div><i class="fas fa-map-marker-alt"></i> ${crop.location || 'Not specified'}</div>
+                            <div><i class="fas fa-calendar"></i> ${crop.season.charAt(0).toUpperCase() + crop.season.slice(1)} Season</div>
+                            <div><i class="fas fa-ruler-combined"></i> ${crop.area} acres</div>
+                        </div>
+                        
+                        ${crop.status === 'active' ? `
+                            <div class="crop-progress">
+                                <div class="crop-progress-label">
+                                    <span>Growth Progress</span>
+                                    <span>${progress}%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="crop-metrics">
+                            <div class="metric">
+                                <div class="metric-value">₹${((crop.expectedYield || 0) * (crop.expectedPrice || 0)).toLocaleString('en-IN')}</div>
+                                <div class="metric-label">Expected Revenue</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${crop.expectedYield || 0}t</div>
+                                <div class="metric-label">Expected Yield</div>
+                            </div>
+                        </div>
+                        
+                        ${weatherInfo ? `
+                            <div class="crop-weather" style="background: rgba(116, 185, 255, 0.1); padding: 0.75rem; border-radius: 8px; margin-top: 1rem;">
+                                <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.25rem;">Weather for ${crop.location}</div>
+                                <div style="font-size: 0.9rem;">${weatherInfo}</div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="crop-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-secondary" style="flex: 1; font-size: 0.8rem;" onclick="viewCropDetails('${crop.id}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-primary" style="flex: 1; font-size: 0.8rem;" onclick="editCrop('${crop.id}')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            ${crop.status === 'active' ? `
+                                <button class="btn btn-success" style="flex: 1; font-size: 0.8rem;" onclick="harvestCrop('${crop.id}')">
+                                    <i class="fas fa-cut"></i> Harvest
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateCropProgress(crop) {
+            if (crop.status !== 'active') return 100;
+            
+            const sowingDate = new Date(crop.sowingDate);
+            const harvestDate = new Date(crop.expectedHarvest);
+            const today = new Date();
+            
+            const totalDays = (harvestDate - sowingDate) / (1000 * 60 * 60 * 24);
+            const daysPassed = (today - sowingDate) / (1000 * 60 * 60 * 24);
+            
+            const progress = Math.min(Math.max((daysPassed / totalDays) * 100, 0), 100);
+            return Math.round(progress);
+        }
+
+        function getCropWeatherInfo(crop) {
+            // This would fetch weather info for the crop location
+            // For now, return sample weather info
+            const conditions = ['Sunny, good for growth', 'Light rain expected', 'Partly cloudy', 'High humidity, monitor for pests'];
+            return conditions[Math.floor(Math.random() * conditions.length)];
+        }
+
+        function showAddCropModal() {
+            document.getElementById('addCropModal').classList.add('active');
+            
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('sowingDate').value = today;
+            
+            // Set expected harvest date (90 days from sowing)
+            const harvestDate = new Date();
+            harvestDate.setDate(harvestDate.getDate() + 90);
+            document.getElementById('expectedHarvest').value = harvestDate.toISOString().split('T')[0];
+        }
+
+        function handleAddCrop(e) {
+            e.preventDefault();
+            
+            const cropData = {
+                id: Date.now().toString(),
+                name: document.getElementById('cropName').value,
+                variety: document.getElementById('cropVariety').value,
+                area: parseFloat(document.getElementById('cropArea').value),
+                season: document.getElementById('cropSeason').value,
+                location: document.getElementById('cropLocation').value,
+                sowingDate: document.getElementById('sowingDate').value,
+                expectedHarvest: document.getElementById('expectedHarvest').value,
+                expectedYield: parseFloat(document.getElementById('expectedYield').value) || 0,
+                expectedPrice: parseFloat(document.getElementById('expectedPrice').value) || 0,
+                notes: document.getElementById('cropNotes').value,
+                status: 'active',
+                createdAt: new Date().toISOString()
+            };
+            
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            crops.push(cropData);
+            localStorage.setItem(STORAGE_KEYS.CROPS, JSON.stringify(crops));
+            
+            // Also save to Firestore if user is authenticated
+            if (currentUser) {
+                db.collection('crops').doc(cropData.id).set({
+                    ...cropData,
+                    userId: currentUser.uid
+                }).catch(error => console.error('Error saving to Firestore:', error));
+            }
+            
+            loadCrops();
+            closeModal('addCropModal');
+            document.getElementById('addCropForm').reset();
+            showNotification('Crop added successfully!', 'success');
+        }
+
+        function viewCropDetails(cropId) {
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            const crop = crops.find(c => c.id === cropId);
+            if (!crop) return;
+            
+            // Show crop details modal (implementation needed)
+            showNotification(`Viewing details for ${crop.name}`, 'info');
+        }
+
+        function editCrop(cropId) {
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            const crop = crops.find(c => c.id === cropId);
+            if (!crop) return;
+            
+            // Populate form with crop data
+            document.getElementById('cropName').value = crop.name;
+            document.getElementById('cropVariety').value = crop.variety || '';
+            document.getElementById('cropArea').value = crop.area;
+            document.getElementById('cropSeason').value = crop.season;
+            document.getElementById('cropLocation').value = crop.location || '';
+            document.getElementById('sowingDate').value = crop.sowingDate;
+            document.getElementById('expectedHarvest').value = crop.expectedHarvest;
+            document.getElementById('expectedYield').value = crop.expectedYield || '';
+            document.getElementById('expectedPrice').value = crop.expectedPrice || '';
+            document.getElementById('cropNotes').value = crop.notes || '';
+            
+            // Change form to edit mode
+            document.querySelector('#addCropModal .modal-title').textContent = 'Edit Crop';
+            document.querySelector('#addCropForm button[type="submit"]').textContent = 'Update Crop';
+            
+            // Store crop ID for update
+            document.getElementById('addCropForm').dataset.editingId = cropId;
+            
+            showAddCropModal();
+        }
+
+        function harvestCrop(cropId) {
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            const cropIndex = crops.findIndex(c => c.id === cropId);
+            if (cropIndex === -1) return;
+            
+            crops[cropIndex].status = 'harvested';
+            crops[cropIndex].harvestDate = new Date().toISOString().split('T')[0];
+            
+            localStorage.setItem(STORAGE_KEYS.CROPS, JSON.stringify(crops));
+            loadCrops();
+            showNotification(`${crops[cropIndex].name} marked as harvested!`, 'success');
+        }
+
+        // Financial Management Functions
+        function loadTransactions() {
+            const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+            displayTransactions(transactions);
+        }
+
+        function displayTransactions(transactions) {
+            const tbody = document.getElementById('transactionsTableBody');
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center" style="padding: 2rem;">
+                            <div>
+                                <i class="fas fa-coins" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i>
+                                <div>No transactions recorded yet</div>
+                                <button class="btn btn-primary mt-2" onclick="showAddTransactionModal()">Add First Transaction</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = transactions.slice(-20).reverse().map(transaction => `
+                <tr>
+                    <td>${new Date(transaction.date).toLocaleDateString('en-IN')}</td>
+                    <td>${transaction.description}</td>
+                    <td><span class="badge">${transaction.category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></td>
+                    <td><span class="badge ${transaction.type === 'income' ? 'bg-success' : 'bg-error'}">${transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}</span></td>
+                    <td class="${transaction.type === 'income' ? 'text-success' : 'text-error'}">₹${transaction.amount.toLocaleString('en-IN')}</td>
+                    <td>
+                        <button class="btn btn-secondary" style="font-size: 0.8rem;" onclick="editTransaction('${transaction.id}')">Edit</button>
+                        <button class="btn btn-error" style="font-size: 0.8rem;" onclick="deleteTransaction('${transaction.id}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddTransactionModal() {
+            document.getElementById('addTransactionModal').classList.add('active');
+            document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function updateTransactionCategories() {
+            const type = document.getElementById('transactionType').value;
+            const categorySelect = document.getElementById('transactionCategory');
+            
+            let categories = [];
+            if (type === 'income') {
+                categories = [
+                    { value: 'crop-sale', label: 'Crop Sale' },
+                    { value: 'livestock-sale', label: 'Livestock Sale' },
+                    { value: 'government-subsidy', label: 'Government Subsidy' },
+                    { value: 'contract-farming', label: 'Contract Farming' },
+                    { value: 'other-income', label: 'Other Income' }
+                ];
+            } else if (type === 'expense') {
+                categories = [
+                    { value: 'seeds', label: 'Seeds' },
+                    { value: 'fertilizers', label: 'Fertilizers' },
+                    { value: 'pesticides', label: 'Pesticides' },
+                    { value: 'equipment', label: 'Equipment' },
+                    { value: 'labor', label: 'Labor' },
+                    { value: 'fuel', label: 'Fuel' },
+                    { value: 'irrigation', label: 'Irrigation' },
+                    { value: 'transportation', label: 'Transportation' },
+                    { value: 'loan-payment', label: 'Loan Payment' },
+                    { value: 'other-expense', label: 'Other Expense' }
+                ];
+            }
+            
+            categorySelect.innerHTML = '<option value="">Select Category</option>' +
+                categories.map(cat => `<option value="${cat.value}">${cat.label}</option>`).join('');
+        }
+
+        function handleAddTransaction(e) {
+            e.preventDefault();
+            
+            const transactionData = {
+                id: Date.now().toString(),
+                type: document.getElementById('transactionType').value,
+                category: document.getElementById('transactionCategory').value,
+                description: document.getElementById('transactionDescription').value,
+                amount: parseFloat(document.getElementById('transactionAmount').value),
+                date: document.getElementById('transactionDate').value,
+                paymentMethod: document.getElementById('transactionPaymentMethod').value,
+                notes: document.getElementById('transactionNotes').value,
+                createdAt: new Date().toISOString()
+            };
+            
+            const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+            transactions.push(transactionData);
+            localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+            
+            // Save to Firestore if user is authenticated
+            if (currentUser) {
+                db.collection('transactions').doc(transactionData.id).set({
+                    ...transactionData,
+                    userId: currentUser.uid
+                }).catch(error => console.error('Error saving to Firestore:', error));
+            }
+            
+            loadTransactions();
+            updateDashboardStats();
+            closeModal('addTransactionModal');
+            document.getElementById('addTransactionForm').reset();
+            showNotification('Transaction added successfully!', 'success');
+        }
+
+        function editTransaction(transactionId) {
+            // Implementation for editing transactions
+            showNotification('Edit transaction functionality coming soon!', 'info');
+        }
+
+        function deleteTransaction(transactionId) {
+            if (confirm('Are you sure you want to delete this transaction?')) {
+                const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+                const filteredTransactions = transactions.filter(t => t.id !== transactionId);
+                localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(filteredTransactions));
+                
+                loadTransactions();
+                updateDashboardStats();
+                showNotification('Transaction deleted successfully!', 'success');
+            }
+        }
+
+        // Loan Calculator Functions
+        function showLoanCalculator() {
+            document.getElementById('loanCalculatorModal').classList.add('active');
+        }
+
+        function calculateLoan() {
+            const principal = parseFloat(document.getElementById('loanPrincipal').value) || 0;
+            const rate = parseFloat(document.getElementById('loanRate').value) || 0;
+            const term = parseInt(document.getElementById('loanTerm').value) || 0;
+            const type = document.getElementById('loanType').value;
+            
+            if (principal && rate && term) {
+                let monthlyEMI, totalInterest, totalAmount;
+                
+                if (type === 'compound') {
+                    const monthlyRate = rate / 100 / 12;
+                    monthlyEMI = principal * (monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1);
+                    totalAmount = monthlyEMI * term;
+                    totalInterest = totalAmount - principal;
+                } else {
+                    totalInterest = principal * (rate / 100) * (term / 12);
+                    totalAmount = principal + totalInterest;
+                    monthlyEMI = totalAmount / term;
+                }
+                
+                document.getElementById('monthlyEMI').textContent = `₹${monthlyEMI.toLocaleString('en-IN', {maximumFractionDigits: 2})}`;
+                document.getElementById('totalInterest').textContent = `₹${totalInterest.toLocaleString('en-IN', {maximumFractionDigits: 2})}`;
+                document.getElementById('totalAmount').textContent = `₹${totalAmount.toLocaleString('en-IN', {maximumFractionDigits: 2})}`;
+            }
+        }
+
+        function saveLoan() {
+            const loanData = {
+                principal: parseFloat(document.getElementById('loanPrincipal').value),
+                rate: parseFloat(document.getElementById('loanRate').value),
+                term: parseInt(document.getElementById('loanTerm').value),
+                type: document.getElementById('loanType').value,
+                monthlyEMI: parseFloat(document.getElementById('monthlyEMI').textContent.replace('₹', '').replace(',', '')),
+                totalAmount: parseFloat(document.getElementById('totalAmount').textContent.replace('₹', '').replace(',', '')),
+                createdAt: new Date().toISOString()
+            };
+            
+            // Add loan as expense transaction
+            const transactionData = {
+                id: Date.now().toString(),
+                type: 'expense',
+                category: 'loan',
+                description: `Loan - ${loanData.type} interest`,
+                amount: loanData.principal,
+                date: new Date().toISOString().split('T')[0],
+                paymentMethod: 'bank_transfer',
+                notes: `${loanData.rate}% interest, ${loanData.term} months term`,
+                createdAt: new Date().toISOString()
+            };
+            
+            const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+            transactions.push(transactionData);
+            localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+            
+            closeModal('loanCalculatorModal');
+            showNotification('Loan saved successfully!', 'success');
+        }
+
+        // Asset Management Functions
+        function loadAssets() {
+            const assets = JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSETS) || '[]');
+            displayAssets(assets);
+            updateAssetCounts(assets);
+        }
+
+        function displayAssets(assets) {
+            const assetsList = document.getElementById('assetsList');
+            
+            if (assets.length === 0) {
+                assetsList.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                        <i class="fas fa-tractor" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                        <h3>No assets recorded yet</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Start tracking your farm equipment, livestock, land, and inventory.</p>
+                        <button class="btn btn-primary" onclick="showAddAssetModal()">
+                            <i class="fas fa-plus"></i> Add Your First Asset
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            assetsList.innerHTML = assets.map(asset => {
+                const icon = getAssetIcon(asset.type);
+                const currentValue = calculateCurrentValue(asset);
+                
+                return `
+                    <div class="card asset-card">
+                        <div class="asset-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <i class="${icon}" style="color: var(--primary-color);"></i>
+                                    <h3 style="margin: 0;">${asset.name}</h3>
+                                </div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary); text-transform: capitalize;">${asset.type.replace('-', ' ')}</div>
+                            </div>
+                            <div class="asset-value" style="text-align: right;">
+                                <div style="font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">₹${currentValue.toLocaleString('en-IN')}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">Current Value</div>
+                            </div>
+                        </div>
+                        
+                        ${asset.type === 'equipment' ? `
+                            <div class="asset-details">
+                                <div><strong>Condition:</strong> ${asset.condition || 'Good'}</div>
+                                <div><strong>Purchase Date:</strong> ${asset.purchaseDate ? new Date(asset.purchaseDate).toLocaleDateString('en-IN') : 'N/A'}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${asset.type === 'livestock' ? `
+                            <div class="asset-details">
+                                <div><strong>Count:</strong> ${asset.count || 1}</div>
+                                <div><strong>Breed:</strong> ${asset.breed || 'N/A'}</div>
+                                <div><strong>Health:</strong> <span class="text-${asset.health === 'healthy' ? 'success' : 'warning'}">${asset.health || 'Healthy'}</span></div>
+                            </div>
+                        ` : ''}
+                        
+                        ${asset.type === 'land' ? `
+                            <div class="asset-details">
+                                <div><strong>Size:</strong> ${asset.size || 0} acres</div>
+                                <div><strong>Type:</strong> ${asset.landType || 'Owned'}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${asset.type === 'inventory' ? `
+                            <div class="asset-details">
+                                <div><strong>Quantity:</strong> ${asset.quantity || 0} ${asset.unit || 'units'}</div>
+                                <div><strong>Purchase Date:</strong> ${asset.purchaseDate ? new Date(asset.purchaseDate).toLocaleDateString('en-IN') : 'N/A'}</div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="asset-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-secondary" style="flex: 1; font-size: 0.8rem;" onclick="viewAsset('${asset.id}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-primary" style="flex: 1; font-size: 0.8rem;" onclick="editAsset('${asset.id}')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-error" style="flex: 1; font-size: 0.8rem;" onclick="deleteAsset('${asset.id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateAssetCounts(assets) {
+            const counts = {
+                equipment: assets.filter(a => a.type === 'equipment').length,
+                livestock: assets.filter(a => a.type === 'livestock').reduce((sum, a) => sum + (a.count || 1), 0),
+                land: assets.filter(a => a.type === 'land').length,
+                inventory: assets.filter(a => a.type === 'inventory').length
+            };
+            
+            document.getElementById('equipmentCount').textContent = `${counts.equipment} items`;
+            document.getElementById('livestockCount').textContent = `${counts.livestock} animals`;
+            document.getElementById('landCount').textContent = `${counts.land} plots`;
+            document.getElementById('inventoryCount').textContent = `${counts.inventory} items`;
+        }
+
+        function getAssetIcon(type) {
+            const icons = {
+                equipment: 'fas fa-tractor',
+                livestock: 'fas fa-horse',
+                land: 'fas fa-map',
+                inventory: 'fas fa-boxes'
+            };
+            return icons[type] || 'fas fa-box';
+        }
+
+        function calculateCurrentValue(asset) {
+            if (!asset.purchasePrice) return 0;
+            
+            if (asset.type === 'equipment') {
+                // Simple depreciation calculation (10% per year)
+                const years = asset.purchaseDate ? 
+                    (new Date().getFullYear() - new Date(asset.purchaseDate).getFullYear()) : 0;
+                const depreciationRate = 0.10;
+                return Math.max(asset.purchasePrice * Math.pow(1 - depreciationRate, years), asset.purchasePrice * 0.1);
+            }
+            
+            return asset.purchasePrice; // For other asset types, assume no depreciation
+        }
+
+        function showAddAssetModal() {
+            document.getElementById('addAssetModal').classList.add('active');
+        }
+
+        function updateAssetFields() {
+            const type = document.getElementById('assetType').value;
+            
+            // Hide all specific fields
+            document.querySelectorAll('#equipmentFields, #livestockFields, #landFields, #inventoryFields').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show relevant fields
+            if (type) {
+                document.getElementById(`${type}Fields`).classList.remove('hidden');
+            }
+        }
+
+        function handleAddAsset(e) {
+            e.preventDefault();
+            
+            const assetData = {
+                id: Date.now().toString(),
+                type: document.getElementById('assetType').value,
+                name: document.getElementById('assetName').value,
+                purchaseDate: document.getElementById('assetPurchaseDate').value,
+                purchasePrice: parseFloat(document.getElementById('assetPurchasePrice').value) || 0,
+                notes: document.getElementById('assetNotes').value,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Add type-specific data
+            if (assetData.type === 'equipment') {
+                assetData.condition = document.getElementById('equipmentCondition').value;
+                assetData.maintenanceCost = parseFloat(document.getElementById('equipmentMaintenanceCost').value) || 0;
+            } else if (assetData.type === 'livestock') {
+                assetData.count = parseInt(document.getElementById('animalCount').value) || 1;
+                assetData.breed = document.getElementById('animalBreed').value;
+                assetData.health = document.getElementById('animalHealth').value;
+            } else if (assetData.type === 'land') {
+                assetData.size = parseFloat(document.getElementById('landSize').value) || 0;
+                assetData.landType = document.getElementById('landType').value;
+            } else if (assetData.type === 'inventory') {
+                assetData.quantity = parseFloat(document.getElementById('inventoryQuantity').value) || 0;
+                assetData.unit = document.getElementById('inventoryUnit').value;
+            }
+            
+            const assets = JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSETS) || '[]');
+            assets.push(assetData);
+            localStorage.setItem(STORAGE_KEYS.ASSETS, JSON.stringify(assets));
+            
+            // Save to Firestore if user is authenticated
+            if (currentUser) {
+                db.collection('assets').doc(assetData.id).set({
+                    ...assetData,
+                    userId: currentUser.uid
+                }).catch(error => console.error('Error saving to Firestore:', error));
+            }
+            
+            loadAssets();
+            closeModal('addAssetModal');
+            document.getElementById('addAssetForm').reset();
+            updateAssetFields(); // Hide all specific fields
+            showNotification('Asset added successfully!', 'success');
+        }
+
+        function filterAssets(type) {
+            const assets = JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSETS) || '[]');
+            const filteredAssets = type === 'all' ? assets : assets.filter(asset => asset.type === type);
+            displayAssets(filteredAssets);
+        }
+
+        function viewAsset(assetId) {
+            showNotification('Asset details view coming soon!', 'info');
+        }
+
+        function editAsset(assetId) {
+            showNotification('Asset editing coming soon!', 'info');
+        }
+
+        function deleteAsset(assetId) {
+            if (confirm('Are you sure you want to delete this asset?')) {
+                const assets = JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSETS) || '[]');
+                const filteredAssets = assets.filter(a => a.id !== assetId);
+                localStorage.setItem(STORAGE_KEYS.ASSETS, JSON.stringify(filteredAssets));
+                
+                loadAssets();
+                showNotification('Asset deleted successfully!', 'success');
+            }
+        }
+
+        // Smart Ideas Functions
+        function refreshIdeas() {
+            generateSmartIdeas();
+        }
+
+        function generateSmartIdeas() {
+            const ideas = [
+                {
+                    id: 1,
+                    category: 'crop',
+                    title: 'Intercropping Strategy',
+                    description: 'Plant legumes between main crops to improve soil nitrogen and increase yield',
+                    priority: 'high',
+                    effort: 'medium',
+                    benefit: '₹15,000 - ₹25,000',
+                    timeframe: '1 season'
+                },
+                {
+                    id: 2,
+                    category: 'technology',
+                    title: 'Drip Irrigation System',
+                    description: 'Install drip irrigation to reduce water usage by 40% and increase crop yield',
+                    priority: 'high',
+                    effort: 'high',
+                    benefit: '₹50,000 - ₹1,00,000',
+                    timeframe: '6 months'
+                },
+                {
+                    id: 3,
+                    category: 'financial',
+                    title: 'Value Addition',
+                    description: 'Process raw crops into value-added products for better market prices',
+                    priority: 'medium',
+                    effort: 'high',
+                    benefit: '₹25,000 - ₹50,000',
+                    timeframe: '3-6 months'
+                },
+                {
+                    id: 4,
+                    category: 'market',
+                    title: 'Direct Market Sales',
+                    description: 'Sell directly to consumers through farmers markets or online platforms',
+                    priority: 'medium',
+                    effort: 'low',
+                    benefit: '₹10,000 - ₹20,000',
+                    timeframe: '1 month'
+                },
+                {
+                    id: 5,
+                    category: 'crop',
+                    title: 'Crop Rotation Planning',
+                    description: 'Implement systematic crop rotation to maintain soil health and prevent pests',
+                    priority: 'high',
+                    effort: 'low',
+                    benefit: '₹20,000 - ₹40,000',
+                    timeframe: '1 year'
+                },
+                {
+                    id: 6,
+                    category: 'technology',
+                    title: 'Soil Testing Program',
+                    description: 'Regular soil testing to optimize fertilizer use and improve crop health',
+                    priority: 'medium',
+                    effort: 'low',
+                    benefit: '₹8,000 - ₹15,000',
+                    timeframe: '2 months'
+                }
+            ];
+            
+            displayIdeas(ideas);
+        }
+
+        function displayIdeas(ideas) {
+            const ideasGrid = document.getElementById('ideasGrid');
+            
+            ideasGrid.innerHTML = ideas.map(idea => `
+                <div class="card idea-card">
+                    <div class="idea-header" style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div>
+                            <div class="idea-category" style="font-size: 0.8rem; color: var(--primary-color); font-weight: 500; margin-bottom: 0.25rem;">
+                                ${idea.category.toUpperCase()}
+                            </div>
+                            <h3 style="margin: 0;">${idea.title}</h3>
+                        </div>
+                        <div class="priority-badge ${idea.priority}" style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 500; background: var(--${idea.priority === 'high' ? 'error' : idea.priority === 'medium' ? 'warning' : 'success'}-color); color: white;">
+                            ${idea.priority.toUpperCase()}
+                        </div>
+                    </div>
+                    
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">${idea.description}</p>
+                    
+                    <div class="idea-metrics" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Expected Benefit</div>
+                            <div style="font-weight: 500; color: var(--success-color);">${idea.benefit}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Timeframe</div>
+                            <div style="font-weight: 500;">${idea.timeframe}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="effort-indicator" style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Effort Required: ${idea.effort}</div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: ${idea.effort === 'high' ? '80%' : idea.effort === 'medium' ? '50%' : '20%'}; background: var(--${idea.effort === 'high' ? 'error' : idea.effort === 'medium' ? 'warning' : 'success'}-color);"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="idea-actions" style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" style="flex: 1; font-size: 0.8rem;" onclick="implementIdea(${idea.id})">
+                            <i class="fas fa-check"></i> Implement
+                        </button>
+                        <button class="btn btn-secondary" style="flex: 1; font-size: 0.8rem;" onclick="saveIdeaForLater(${idea.id})">
+                            <i class="fas fa-bookmark"></i> Save for Later
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterIdeas(category) {
+            // Update active button
+            document.querySelectorAll('#ideas .btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const allIdeas = [
+                {
+                    id: 1,
+                    category: 'crop',
+                    title: 'Intercropping Strategy',
+                    description: 'Plant legumes between main crops to improve soil nitrogen and increase yield',
+                    priority: 'high',
+                    effort: 'medium',
+                    benefit: '₹15,000 - ₹25,000',
+                    timeframe: '1 season'
+                },
+                {
+                    id: 2,
+                    category: 'technology',
+                    title: 'Drip Irrigation System',
+                    description: 'Install drip irrigation to reduce water usage by 40% and increase crop yield',
+                    priority: 'high',
+                    effort: 'high',
+                    benefit: '₹50,000 - ₹1,00,000',
+                    timeframe: '6 months'
+                },
+                {
+                    id: 3,
+                    category: 'financial',
+                    title: 'Value Addition',
+                    description: 'Process raw crops into value-added products for better market prices',
+                    priority: 'medium',
+                    effort: 'high',
+                    benefit: '₹25,000 - ₹50,000',
+                    timeframe: '3-6 months'
+                },
+                {
+                    id: 4,
+                    category: 'market',
+                    title: 'Direct Market Sales',
+                    description: 'Sell directly to consumers through farmers markets or online platforms',
+                    priority: 'medium',
+                    effort: 'low',
+                    benefit: '₹10,000 - ₹20,000',
+                    timeframe: '1 month'
+                }
+            ];
+            
+            const filteredIdeas = category === 'all' ? allIdeas : allIdeas.filter(idea => idea.category === category);
+            displayIdeas(filteredIdeas);
+        }
+
+        function implementIdea(ideaId) {
+            showNotification('Idea implementation guide coming soon!', 'info');
+        }
+
+        function saveIdeaForLater(ideaId) {
+            showNotification('Idea saved for later!', 'success');
+        }
+
+        // Weather Functions
+        async function loadWeatherData() {
+            try {
+                // Try to get user's location
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        async (position) => {
+                            const lat = position.coords.latitude;
+                            const lon = position.coords.longitude;
+                            await fetchWeatherData(lat, lon);
+                        },
+                        () => {
+                            // Fallback to a default location (Delhi)
+                            fetchWeatherData(28.6139, 77.2090);
+                        }
+                    );
+                } else {
+                    // Fallback to Delhi coordinates
+                    fetchWeatherData(28.6139, 77.2090);
+                }
+            } catch (error) {
+                console.error('Error loading weather data:', error);
+                showNotification('Error loading weather data', 'error');
+            }
+        }
+
+        async function fetchWeatherData(lat, lon) {
+            try {
+                const apiUrl = `${WEATHER_API_BASE}/forecast?location=${lat},${lon}&apikey=${WEATHER_API_KEY}&timesteps=1h,1d&fields=temperature,humidity,windSpeed,precipitationProbability,uvIndex,visibility,pressureSurfaceLevel,temperatureApparent`;
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (data.timelines) {
+                    updateWeatherDisplay(data);
+                    localStorage.setItem(STORAGE_KEYS.WEATHER_CACHE, JSON.stringify({
+                        data: data,
+                        timestamp: Date.now()
+                    }));
+                } else {
+                    throw new Error('Invalid weather data received');
+                }
+            } catch (error) {
+                console.error('Weather API error:', error);
+                // Try to load from cache
+                const cached = localStorage.getItem(STORAGE_KEYS.WEATHER_CACHE);
+                if (cached) {
+                    const parsedCache = JSON.parse(cached);
+                    // Use cache if less than 1 hour old
+                    if (Date.now() - parsedCache.timestamp < 3600000) {
+                        updateWeatherDisplay(parsedCache.data);
+                        return;
+                    }
+                }
+                showSampleWeatherData();
+            }
+        }
+
+        function updateWeatherDisplay(weatherData) {
+            try {
+                const current = weatherData.timelines.hourly.intervals[0].values;
+                const daily = weatherData.timelines.daily.intervals;
+                
+                // Update current weather in dashboard
+                document.getElementById('weatherTemp').textContent = `${Math.round(current.temperature)}°C`;
+                document.getElementById('weatherDesc').textContent = getWeatherDescription(current);
+                document.getElementById('weatherHumidity').textContent = `${Math.round(current.humidity)}%`;
+                document.getElementById('weatherWind').textContent = `${Math.round(current.windSpeed)} km/h`;
+                document.getElementById('weatherUV').textContent = Math.round(current.uvIndex);
+                document.getElementById('weatherPrecip').textContent = `${Math.round(current.precipitationProbability)}%`;
+                
+                // Update detailed weather section if visible
+                if (!document.getElementById('weather').classList.contains('hidden')) {
+                    document.getElementById('currentTemp').textContent = `${Math.round(current.temperature)}°C`;
+                    document.getElementById('currentDesc').textContent = getWeatherDescription(current);
+                    document.getElementById('feelsLike').textContent = `${Math.round(current.temperatureApparent)}°C`;
+                    document.getElementById('currentHumidity').textContent = `${Math.round(current.humidity)}%`;
+                    document.getElementById('currentWind').textContent = `${Math.round(current.windSpeed)} km/h`;
+                    document.getElementById('currentPressure').textContent = `${Math.round(current.pressureSurfaceLevel)} hPa`;
+                    document.getElementById('uvIndex').textContent = Math.round(current.uvIndex);
+                    document.getElementById('soilTemp').textContent = `${Math.round(current.temperature - 2)}°C`;
+                    document.getElementById('precipitation').textContent = `${Math.round(current.precipitationProbability)}%`;
+                    document.getElementById('visibility').textContent = `${Math.round(current.visibility)} km`;
+                    
+                    // Update 5-day forecast
+                    updateWeatherForecast(daily.slice(0, 5));
+                    
+                    // Update farming alerts
+                    updateFarmingAlerts(current);
+                    
+                    // Update temperature chart
+                    updateTemperatureChart(weatherData.timelines.hourly.intervals.slice(0, 24));
+                }
+            } catch (error) {
+                console.error('Error updating weather display:', error);
+                showSampleWeatherData();
+            }
+        }
+
+        function getWeatherDescription(weather) {
+            const temp = weather.temperature;
+            const humidity = weather.humidity;
+            const precip = weather.precipitationProbability;
+            
+            if (precip > 70) return 'Rainy';
+            if (precip > 30) return 'Partly Cloudy';
+            if (temp > 35) return 'Very Hot';
+            if (temp > 25) return 'Warm';
+            if (temp > 15) return 'Pleasant';
+            return 'Cool';
+        }
+
+        function updateWeatherForecast(dailyData) {
+            const forecastContainer = document.getElementById('weatherForecast');
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            forecastContainer.innerHTML = dailyData.map((day, index) => {
+                const date = new Date(day.time);
+                const dayName = index === 0 ? 'Today' : days[date.getDay()];
+                const values = day.values;
+                
+                return `
+                    <div class="forecast-day" style="text-align: center; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px;">
+                        <div style="font-weight: 500; margin-bottom: 0.5rem;">${dayName}</div>
+                        <div style="font-size: 1.2rem; margin-bottom: 0.25rem;">${Math.round(values.temperature)}°C</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">${getWeatherDescription(values)}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            ${Math.round(values.precipitationProbability)}% rain
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateFarmingAlerts(weather) {
+            const alerts = [];
+            
+            if (weather.temperature > 35) {
+                alerts.push({
+                    type: 'warning',
+                    message: 'High temperature alert! Consider extra irrigation for sensitive crops.'
+                });
+            }
+            
+            if (weather.humidity > 80) {
+                alerts.push({
+                    type: 'warning',
+                    message: 'High humidity detected. Monitor crops for fungal diseases.'
+                });
+            }
+            
+            if (weather.precipitationProbability > 70) {
+                alerts.push({
+                    type: 'info',
+                    message: 'Heavy rain expected. Ensure proper drainage in fields.'
+                });
+            }
+            
+            if (weather.uvIndex > 7) {
+                alerts.push({
+                    type: 'warning',
+                    message: 'High UV index. Consider shade protection for sensitive plants.'
+                });
+            }
+            
+            if (alerts.length === 0) {
+                alerts.push({
+                    type: 'success',
+                    message: 'Weather conditions are favorable for farming activities.'
+                });
+            }
+            
+            document.getElementById('farmingAlerts').innerHTML = alerts.map(alert => `
+                <div class="alert alert-${alert.type}" style="padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 4px; border-left: 3px solid var(--${alert.type === 'success' ? 'success' : alert.type === 'warning' ? 'warning' : 'primary'}-color); background: rgba(${alert.type === 'success' ? '76,175,80' : alert.type === 'warning' ? '255,152,0' : '46,125,50'}, 0.1);">
+                    <i class="fas fa-${alert.type === 'success' ? 'check-circle' : alert.type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                    ${alert.message}
+                </div>
+            `).join('');
+        }
+
+        function showSampleWeatherData() {
+            // Show sample weather data when API fails
+            document.getElementById('weatherTemp').textContent = '28°C';
+            document.getElementById('weatherDesc').textContent = 'Partly Cloudy';
+            document.getElementById('weatherHumidity').textContent = '65%';
+            document.getElementById('weatherWind').textContent = '12 km/h';
+            document.getElementById('weatherUV').textContent = '6';
+            document.getElementById('weatherPrecip').textContent = '20%';
+            
+            if (!document.getElementById('weather').classList.contains('hidden')) {
+                document.getElementById('currentTemp').textContent = '28°C';
+                document.getElementById('currentDesc').textContent = 'Partly Cloudy';
+                document.getElementById('feelsLike').textContent = '31°C';
+                document.getElementById('currentHumidity').textContent = '65%';
+                document.getElementById('currentWind').textContent = '12 km/h';
+                document.getElementById('currentPressure').textContent = '1013 hPa';
+            }
+        }
+
+        async function getWeatherByLocation() {
+            const location = document.getElementById('weatherLocation').value;
+            if (!location) return;
+            
+            try {
+                // This is a simplified version - in a real app, you'd geocode the location first
+                showNotification('Getting weather for ' + location, 'info');
+                // For demo purposes, just reload the default weather
+                await loadWeatherData();
+            } catch (error) {
+                showNotification('Error getting weather for location', 'error');
+            }
+        }
+
+        async function getCurrentLocationWeather() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        await fetchWeatherData(lat, lon);
+                        showNotification('Weather updated for current location', 'success');
+                    },
+                    () => {
+                        showNotification('Unable to get your location', 'error');
+                    }
+                );
+            } else {
+                showNotification('Geolocation not supported', 'error');
+            }
+        }
+
+        // Settings and Theme Functions
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '{}');
+            
+            // Apply theme
+            if (settings.theme) {
+                document.documentElement.setAttribute('data-theme', settings.theme);
+                currentTheme = settings.theme;
+                updateThemeIcon();
+            }
+            
+            // Apply language
+            if (settings.language) {
+                changeLanguage(settings.language);
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                theme: currentTheme,
+                language: currentLanguage,
+                notifications: {
+                    harvest: document.getElementById('notifHarvest')?.checked || true,
+                    weather: document.getElementById('notifWeather')?.checked || true,
+                    loans: document.getElementById('notifLoans')?.checked || true
+                }
+            };
+            
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+        }
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(currentTheme);
+        }
+
+        function setTheme(theme) {
+            currentTheme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon();
+            saveSettings();
+        }
+
+        function updateThemeIcon() {
+            const icon = document.querySelector('#themeToggle i');
+            icon.className = currentTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+
+        function changeLanguage(language) {
+            currentLanguage = language;
+            document.getElementById('languageSelect').value = language;
+            document.getElementById('settingsLanguage').value = language;
+            
+            // Update UI text (simplified version)
+            updateUILanguage();
+            saveSettings();
+        }
+
+        function updateUILanguage() {
+            const elements = document.querySelectorAll('[data-translate]');
+            elements.forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[currentLanguage] && translations[currentLanguage][key]) {
+                    el.textContent = translations[currentLanguage][key];
+                }
+            });
+        }
+
+        // Profile Functions
+        async function handleUpdateProfile(e) {
+            e.preventDefault();
+            
+            const profileData = {
+                name: document.getElementById('profileName').value,
+                email: document.getElementById('profileEmail').value,
+                phone: document.getElementById('profilePhone').value,
+                location: document.getElementById('profileLocation').value,
+                farmSize: parseFloat(document.getElementById('profileFarmSize').value) || 0,
+                updatedAt: new Date().toISOString()
+            };
+            
+            try {
+                if (currentUser) {
+                    // Update in Firestore
+                    await db.collection('users').doc(currentUser.uid).update(profileData);
+                }
+                
+                // Update locally
+                localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(profileData));
+                showNotification('Profile updated successfully!', 'success');
+            } catch (error) {
+                console.error('Profile update error:', error);
+                showNotification('Error updating profile', 'error');
+            }
+        }
+
+        function showProfile() {
+            showSection('profile');
+        }
+
+        // Data Management Functions
+        async function exportAllData() {
+            try {
+                const userData = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER_DATA) || '{}');
+                const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+                const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+                const assets = JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSETS) || '[]');
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(20);
+                doc.text('KrishiSphere Farm Report', 20, 20);
+                
+                // Add user info
+                doc.setFontSize(12);
+                let yPos = 40;
+                doc.text(`Farmer: ${userData.name || 'Not specified'}`, 20, yPos);
+                yPos += 10;
+                doc.text(`Location: ${userData.location || 'Not specified'}`, 20, yPos);
+                yPos += 10;
+                doc.text(`Farm Size: ${userData.farmSize || 0} acres`, 20, yPos);
+                yPos += 20;
+                
+                // Add crops summary
+                doc.setFontSize(16);
+                doc.text('Crops Summary', 20, yPos);
+                yPos += 10;
+                doc.setFontSize(12);
+                doc.text(`Total Crops: ${crops.length}`, 20, yPos);
+                yPos += 10;
+                doc.text(`Active Crops: ${crops.filter(c => c.status === 'active').length}`, 20, yPos);
+                yPos += 20;
+                
+                // Add financial summary
+                const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                
+                doc.setFontSize(16);
+                doc.text('Financial Summary', 20, yPos);
+                yPos += 10;
+                doc.setFontSize(12);
+                doc.text(`Total Income: ₹${totalIncome.toLocaleString('en-IN')}`, 20, yPos);
+                yPos += 10;
+                doc.text(`Total Expenses: ₹${totalExpenses.toLocaleString('en-IN')}`, 20, yPos);
+                yPos += 10;
+                doc.text(`Net Profit: ₹${(totalIncome - totalExpenses).toLocaleString('en-IN')}`, 20, yPos);
+                
+                // Save the PDF
+                doc.save('krishisphere-farm-report.pdf');
+                showNotification('Data exported successfully!', 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('Error exporting data', 'error');
+            }
+        }
+
+        function backupData() {
+            if (currentUser) {
+                // In a real app, this would backup to cloud storage
+                showNotification('Cloud backup feature coming soon!', 'info');
+            } else {
+                showNotification('Please sign in to use cloud backup', 'warning');
+            }
+        }
+
+        function clearAllData() {
+            const confirmation = prompt('Type "DELETE ALL" to confirm data deletion:');
+            if (confirmation === 'DELETE ALL') {
+                localStorage.clear();
+                location.reload();
+            } else {
+                showNotification('Data deletion cancelled', 'info');
+            }
+        }
+
+        // Chart Functions
+        function initializeCharts() {
+            setTimeout(() => {
+                if (document.getElementById('incomeExpenseChart')) {
+                    createIncomeExpenseChart();
+                }
+                if (document.getElementById('cropProfitChart')) {
+                    createCropProfitChart();
+                }
+                if (document.getElementById('cashFlowChart')) {
+                    createCashFlowChart();
+                }
+                if (document.getElementById('temperatureChart')) {
+                    createTemperatureChart();
+                }
+            }, 1000);
+        }
+
+        function createIncomeExpenseChart() {
+            const ctx = document.getElementById('incomeExpenseChart');
+            if (!ctx) return;
+            
+            const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+            const monthlyData = processMonthlyTransactions(transactions);
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: monthlyData.labels,
+                    datasets: [{
+                        label: 'Income',
+                        data: monthlyData.income,
+                        backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                        borderColor: 'rgba(76, 175, 80, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Expenses',
+                        data: monthlyData.expenses,
+                        backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                        borderColor: 'rgba(244, 67, 54, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ₹' + context.parsed.y.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createCropProfitChart() {
+            const ctx = document.getElementById('cropProfitChart');
+            if (!ctx) return;
+            
+            const crops = JSON.parse(localStorage.getItem(STORAGE_KEYS.CROPS) || '[]');
+            const profitData = crops.filter(c => c.expectedYield && c.expectedPrice).map(crop => ({
+                name: crop.name,
+                profit: (crop.expectedYield * crop.expectedPrice) - (crop.totalExpenses || 0)
+            }));
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: profitData.map(d => d.name),
+                    datasets: [{
+                        data: profitData.map(d => Math.max(d.profit, 0)),
+                        backgroundColor: [
+                            'rgba(46, 125, 50, 0.8)',
+                            'rgba(76, 175, 80, 0.8)',
+                            'rgba(139, 195, 74, 0.8)',
+                            'rgba(174, 213, 129, 0.8)',
+                            'rgba(200, 230, 201, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(46, 125, 50, 1)',
+                            'rgba(76, 175, 80, 1)',
+                            'rgba(139, 195, 74, 1)',
+                            'rgba(174, 213, 129, 1)',
+                            'rgba(200, 230, 201, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ₹' + context.parsed.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createCashFlowChart() {
+            const ctx = document.getElementById('cashFlowChart');
+            if (!ctx) return;
+            
+            const transactions = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+            const monthlyData = processMonthlyTransactions(transactions);
+            
+            const cashFlow = monthlyData.labels.map((label, index) => 
+                monthlyData.income[index] - monthlyData.expenses[index]
+            );
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthlyData.labels,
+                    datasets: [{
+                        label: 'Cash Flow',
+                        data: cashFlow,
+                        borderColor: 'rgba(46, 125, 50, 1)',
+                        backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    const prefix = value >= 0 ? 'Profit' : 'Loss';
+                                    return prefix + ': ₹' + Math.abs(value).toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createTemperatureChart() {
+            const ctx = document.getElementById('temperatureChart');
+            if (!ctx) return;
+            
+            // Sample temperature data for 24 hours
+            const hours = Array.from({length: 24}, (_, i) => {
+                const hour = i.toString().padStart(2, '0');
+                return `${hour}:00`;
+            });
+            
+            const temperatures = hours.map(() => Math.random() * 10 + 20); // Random temps between 20-30°C
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: temperatures,
+                        borderColor: 'rgba(255, 107, 53, 1)',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '°C';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTemperatureChart(hourlyData) {
+            const ctx = document.getElementById('temperatureChart');
+            if (!ctx) return;
+            
+            const hours = hourlyData.map(interval => {
+                const date = new Date(interval.time);
+                return date.getHours().toString().padStart(2, '0') + ':00';
+            });
+            
+            const temperatures = hourlyData.map(interval => Math.round(interval.values.temperature));
+            
+            Chart.getChart(ctx)?.destroy();
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: temperatures,
+                        borderColor: 'rgba(255, 107, 53, 1)',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '°C';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function processMonthlyTransactions(transactions) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const income = new Array(6).fill(0);
+            const expenses = new Array(6).fill(0);
+            
+            transactions.forEach(transaction => {
+                const month = new Date(transaction.date).getMonth();
+                if (month < 6) { // Last 6 months
+                    if (transaction.type === 'income') {
+                        income[month] += transaction.amount;
+                    } else {
+                        expenses[month] += transaction.amount;
+                    }
+                }
+            });
+            
+            return {
+                labels: months,
+                income,
+                expenses
+            };
+        }
+
+        // Utility Functions
+        function showQuickActions() {
+            const actions = [
+                { label: 'Add Crop', action: 'showAddCropModal()' },
+                { label: 'Add Transaction', action: 'showAddTransactionModal()' },
+                { label: 'Add Asset', action: 'showAddAssetModal()' },
+                { label: 'Check Weather', action: 'showSection("weather")' }
+            ];
+            
+            // Show quick action menu (simplified for demo)
+            const actionMenu = confirm('Quick Actions:\n1. Add Crop\n2. Add Transaction\n3. Add Asset\n4. Check Weather\n\nChoose an action:');
+            
+            if (actionMenu) {
+                showAddCropModal(); // Default to add crop
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            
+            // Reset form if it's an add modal
+            if (modalId.includes('add') || modalId.includes('Add')) {
+                const form = document.querySelector(`#${modalId} form`);
+                if (form) {
+                    form.reset();
+                    form.removeAttribute('data-editing-id');
+                    
+                    // Reset modal title and button text
+                    const title = document.querySelector(`#${modalId} .modal-title`);
+                    const button = document.querySelector(`#${modalId} button[type="submit"]`);
+                    
+                    if (modalId === 'addCropModal') {
+                        title.textContent = 'Add New Crop';
+                        button.textContent = 'Add Crop';
+                    } else if (modalId === 'addTransactionModal') {
+                        title.textContent = 'Add Transaction';
+                        button.textContent = 'Add Transaction';
+                    } else if (modalId === 'addAssetModal') {
+                        title.textContent = 'Add Asset';
+                        button.textContent = 'Add Asset';
+                    }
+                }
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Support Functions
+        function showHelpModal() {
+            alert('Help & FAQ:\n\n1. How to add a crop?\n- Click on "Add Crop" button in Crop Management section\n\n2. How to track expenses?\n- Use "Add Transaction" in Financial Management\n\n3. How to view weather?\n- Check the Weather section for detailed forecasts\n\nFor more help, contact support.');
+        }
+
+        function contactSupport() {
+            const subject = encodeURIComponent('KrishiSphere Support Request');
+            const body = encodeURIComponent('Hi, I need help with...');
+            window.open(`mailto:support@krishisphere.com?subject=${subject}&body=${body}`);
+        }
+
+        function reportBug() {
+            const subject = encodeURIComponent('KrishiSphere Bug Report');
+            const body = encodeURIComponent('Bug Description:\n\nSteps to reproduce:\n\nExpected behavior:\n\nActual behavior:');
+            window.open(`mailto:bugs@krishisphere.com?subject=${subject}&body=${body}`);
+        }
+
+        // Initialize the smart ideas on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                generateSmartIdeas();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
